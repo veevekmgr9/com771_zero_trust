@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f7fb;
+        }
+
+        .container {
+            width: 1100px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .card {
+            display: inline-block;
+            padding: 15px;
+            margin: 10px;
+            background: #e0f2fe;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        button {
+            padding: 8px 12px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h3>Assign Device</h3>
+        <form method="POST" action="/assign_device">
+            <select name="device_id">
+                {% for d in devices %}
+                <option value="{{ d.device_id }}">{{ d.device_id }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="patient_id">
+                {% for p in patients %}
+                <option value="{{ p.id }}">{{ p.patient_name }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="access_type">
+                <option value="read">Read</option>
+                <option value="write">Write</option>
+                <option value="read_write">Read/Write</option>
+            </select>
+
+            <button>Assign</button>
+        </form>
+    </div>
+    <div class="container">
+        <h3>Current Assignments</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Device ID</th>
+                    <th>Patient Name</th>
+                    <th>Access Type</th>
+                    <th>Status</th>
+                    <th>Assigned By</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for a in assignments %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ a.device_id }}</td>
+                    <td>{{ a.patient_name }}</td>
+                    <td>{{ a.access_type }}</td>
+                    <td>{{ a.assignment_status }}</td>
+                    <td>{{ a.assigned_by }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
