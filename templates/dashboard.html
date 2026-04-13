@@ -131,15 +131,20 @@
         </div>
 
         <div class="actions">
-            {% if role == 'admin' %}
+            {% if role == 'Admin' %}
             <a href="{{ url_for('admin_panel') }}" class="btn">Admin Panel</a>
             {% endif %}
+            {% if role in ['Admin', 'Doctor'] %}
             <a href="{{ url_for('assignments') }}" class="btn">Assign Patients</a>
+            {% endif %}
             <a href="{{ url_for('patients') }}" class="btn">View Patients</a>
             <a href="{{ url_for('iot_access') }}" class="btn">Test IoT Device Access</a>
             <a href="{{ url_for('submit_reading') }}" class="btn">Submit IoT Reading</a>
             <a href="{{ url_for('device_readings') }}" class="btn">View Device Readings</a>
             <a href="{{ url_for('security_logs') }}" class="btn">View Security Logs</a>
+            {% if role == 'Admin' %}
+            <a href="{{ url_for('analytics') }}" class="btn">View Analytics</a>
+            {% endif %}
         </div>
 
         <div class="note">
