@@ -131,6 +131,9 @@
         </div>
 
         <div class="actions">
+            {% if role == 'admin' %}
+            <a href="{{ url_for('admin_panel') }}" class="btn">Admin Panel</a>
+            {% endif %}
             <a href="{{ url_for('patients') }}" class="btn">View Patients</a>
             <a href="{{ url_for('iot_access') }}" class="btn">Test IoT Device Access</a>
             <a href="{{ url_for('submit_reading') }}" class="btn">Submit IoT Reading</a>
