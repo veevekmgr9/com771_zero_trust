@@ -31,7 +31,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 950px;
             margin: 40px auto;
             background: white;
             padding: 30px;
@@ -57,12 +57,36 @@
             margin: 0 0 10px;
         }
 
+        .good {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .bad {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+
+        .actions {
+            margin-top: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-right: 10px;
+        }
+
         .note {
             margin-top: 30px;
             padding: 15px;
-            background: #fef3c7;
+            background: #ecfeff;
             border-radius: 8px;
-            color: #92400e;
+            color: #155e75;
         }
     </style>
 </head>
@@ -75,6 +99,7 @@
 
     <div class="container">
         <h2>Welcome, {{ username }}</h2>
+        <p>Your dashboard access has passed the Zero Trust checks.</p>
 
         <div class="info-grid">
             <div class="card">
@@ -88,17 +113,30 @@
             </div>
 
             <div class="card">
+                <h4>IP Address</h4>
+                <p>{{ ip_address }}</p>
+            </div>
+
+            <div class="card">
                 <h4>MFA Status</h4>
                 <p>
                     {% if mfa_verified %}
-                    Verified
+                    <span class="good">Verified</span>
                     {% else %}
-                    Not Verified Yet
+                    <span class="bad">Not Verified</span>
                     {% endif %}
                 </p>
             </div>
         </div>
 
+        <div class="actions">
+            <a href="{{ url_for('iot_access') }}" class="btn">Test IoT Device Access</a>
+        </div>
+
+        <div class="note">
+            This system now uses a separate device-patient assignment model, which is more realistic for hospital IoT
+            security.
+        </div>
     </div>
 </body>
 

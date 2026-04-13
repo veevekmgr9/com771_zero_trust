@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Device Access Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .allow {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .deny {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .demo-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>IoT Device Access Verification</h2>
+        <p>Test whether an IoT device is allowed to access a patient's data.</p>
+
+        <form method="POST">
+            <label for="device_id">Device ID</label>
+            <input type="text" name="device_id" id="device_id" required>
+
+            <label for="patient_id">Patient ID</label>
+            <input type="number" name="patient_id" id="patient_id" required>
+
+            <label for="requested_action">Requested Action</label>
+            <select name="requested_action" id="requested_action">
+                <option value="read">Read</option>
+                <option value="write">Write</option>
+            </select>
+
+            <button type="submit">Verify IoT Access</button>
+        </form>
+
+        {% if result %}
+        <div class="result {% if result.status == 'ALLOW' %}allow{% else %}deny{% endif %}">
+            <strong>{{ result.status }}</strong><br>
+            {{ result.message }}
+
+            {% if result.status == 'ALLOW' and result.patient_name %}
+            <hr>
+            <p><strong>Patient Name:</strong> {{ result.patient_name }}</p>
+            <p><strong>Disease:</strong> {{ result.disease }}</p>
+            <p><strong>Doctor Assigned:</strong> {{ result.doctor_assigned }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="demo-box">
+            <strong>Try these examples:</strong>
+            <p>Allow case: Device <code>IOT-HEART-001</code>, Patient <code>1</code>, Action <code>read</code></p>
+            <p>Deny case: Device <code>IOT-TEMP-001</code>, Patient <code>2</code>, Action <code>read</code></p>
+            <p>Deny case: Device <code>IOT-HEART-001</code>, Patient <code>3</code>, Action <code>read</code></p>
+            <p>Deny case: Device <code>IOT-OXY-001</code>, Patient <code>1</code>, Action <code>write</code></p>
+        </div>
+
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+    </div>
+</body>
+
+</html>
