@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        form {
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 18px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #eff6ff;
+        }
+
+        .error {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .section-title {
+            margin-top: 30px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
+        }
+
+        .demo-box {
+            margin-top: 20px;
+            padding: 14px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Patient Records</h2>
+        <p>Search patient records securely. Suspicious inputs will be blocked and logged.</p>
+
+        <form method="POST" action="{{ url_for('search_patient') }}">
+            <input type="text" name="search_query" placeholder="Search by patient name, ID, or disease" required>
+            <button type="submit">Search</button>
+        </form>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <div class="demo-box">
+            <strong>Try these safe searches:</strong>
+            <p><code>John</code></p>
+            <p><code>Diabetes</code></p>
+            <p><code>1</code></p>
+            <strong>Try these blocked attacks:</strong>
+            <p><code>' OR 1=1 --</code></p>
+            <p><code>&lt;script&gt;alert('xss')&lt;/script&gt;</code></p>
+        </div>
+
+        {% if search_results is not none %}
+        <h3 class="section-title">Search Results</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient Name</th>
+                    <th>Age</th>
+                    <th>Disease</th>
+                    <th>Doctor Assigned</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in search_results %}
+                <tr>
+                    <td>{{ patient.id }}</td>
+                    <td>{{ patient.patient_name }}</td>
+                    <td>{{ patient.age }}</td>
+                    <td>{{ patient.disease }}</td>
+                    <td>{{ patient.doctor_assigned }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <h3 class="section-title">All Patients</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient Name</th>
+                    <th>Age</th>
+                    <th>Disease</th>
+                    <th>Doctor Assigned</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>
+                        {{ loop.index }}
+                    </td>
+                    <td>{{ patient.patient_name }}</td>
+                    <td>{{ patient.age }}</td>
+                    <td>{{ patient.disease }}</td>
+                    <td>{{ patient.doctor_assigned }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+    </div>
+</body>
+
+</html>

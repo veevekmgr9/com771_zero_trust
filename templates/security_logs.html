@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Readings</title>
+    <title>Security Logs</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,7 +14,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1250px;
             margin: 40px auto;
             background: white;
             padding: 30px;
@@ -25,27 +25,29 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 18px;
+            font-size: 14px;
         }
 
         th,
         td {
-            padding: 12px;
+            padding: 10px;
             border-bottom: 1px solid #ddd;
             text-align: left;
+            vertical-align: top;
         }
 
         th {
             background: #eff6ff;
         }
 
-        .normal {
+        .allow {
             color: #15803d;
             font-weight: bold;
         }
 
-        .suspicious {
-            color: #b45309;
+        .deny {
+            color: #b91c1c;
             font-weight: bold;
         }
 
@@ -60,40 +62,47 @@
 
 <body>
     <div class="container">
-        <h2>Stored IoT Device Readings</h2>
+        <h2>Security Logs</h2>
+        <p>This page shows authentication, access control, IoT events, blocked attacks, and reading submissions.</p>
 
         <table>
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Device ID</th>
-                    <th>Patient</th>
-                    <th>Heart Rate</th>
-                    <th>Temperature</th>
-                    <th>Oxygen Level</th>
-                    <th>Status</th>
-                    <th>Notes</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Module</th>
+                    <th>Device</th>
+                    <th>IP Address</th>
+                    <th>Action</th>
+                    <th>Input</th>
+                    <th>Attack Type</th>
+                    <th>Decision</th>
+                    <th>Reason</th>
                     <th>Timestamp</th>
                 </tr>
             </thead>
             <tbody>
-                {% for reading in readings %}
+                {% for log in logs %}
                 <tr>
                     <td>{{ loop.index }}</td>
-                    <td>{{ reading.device_id }}</td>
-                    <td>{{ reading.patient_name }}</td>
-                    <td>{{ reading.heart_rate }}</td>
-                    <td>{{ reading.temperature }}</td>
-                    <td>{{ reading.oxygen_level }}</td>
+                    <td>{{ log.username }}</td>
+                    <td>{{ log.role }}</td>
+                    <td>{{ log.module_name }}</td>
+                    <td>{{ log.device_name }}</td>
+                    <td>{{ log.ip_address }}</td>
+                    <td>{{ log.requested_action }}</td>
+                    <td>{{ log.user_input }}</td>
+                    <td>{{ log.attack_type }}</td>
                     <td>
-                        {% if reading.reading_status == 'normal' %}
-                        <span class="normal">{{ reading.reading_status }}</span>
+                        {% if log.decision == 'ALLOW' %}
+                        <span class="allow">{{ log.decision }}</span>
                         {% else %}
-                        <span class="suspicious">{{ reading.reading_status }}</span>
+                        <span class="deny">{{ log.decision }}</span>
                         {% endif %}
                     </td>
-                    <td>{{ reading.notes }}</td>
-                    <td>{{ reading.timestamp }}</td>
+                    <td>{{ log.reason }}</td>
+                    <td>{{ log.timestamp }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
