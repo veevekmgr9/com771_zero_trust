@@ -54,6 +54,20 @@ CREATE TABLE IF NOT EXISTS device_patient_assignments (
 """)
 
 cursor.execute("""
+CREATE TABLE IF NOT EXISTS device_readings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL,
+    patient_id INTEGER NOT NULL,
+    heart_rate REAL,
+    temperature REAL,
+    oxygen_level REAL,
+    reading_status TEXT NOT NULL,
+    notes TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+cursor.execute("""
 CREATE TABLE IF NOT EXISTS trusted_ips (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ip_address TEXT UNIQUE,

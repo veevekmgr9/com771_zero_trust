@@ -26,11 +26,10 @@ trusted_devices = [
 ]
 
 device_patient_assignments = [
-    ("IOT-HEART-001", 1, "admin", "read", "active", None),
+    ("IOT-HEART-001", 1, "admin", "read_write", "active", None),
     ("IOT-OXY-001", 1, "admin", "read", "active", None),
     ("IOT-HEART-001", 2, "admin", "read", "ended", "2026-04-01 10:00:00"),
-    ("IOT-TEMP-001", 2, "admin", "read", "active", None),
-    ("IOT-HEART-001", 3, "admin", "read", "active", None),
+    ("IOT-TEMP-001", 2, "admin", "read_write", "active", None),
 ]
 
 trusted_ips = [
