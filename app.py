@@ -196,10 +196,23 @@ def admin_panel():
     patients = conn.execute("SELECT * FROM patients").fetchall()
     ips = conn.execute("SELECT * FROM trusted_ips").fetchall()
 
+    assignments = conn.execute("""
+        SELECT dpa.*, p.patient_name
+        FROM device_patient_assignments dpa
+        JOIN patients p ON dpa.patient_id = p.id
+        ORDER BY dpa.id DESC
+    """).fetchall()
+
     conn.close()
 
-    return render_template("admin.html", stats=stats, devices=devices, patients=patients, ips=ips)
-
+    return render_template(
+        "admin.html",
+        stats=stats,
+        devices=devices,
+        patients=patients,
+        ips=ips,
+        assignments=assignments
+    )
 @app.route("/assignments")
 def assignments():
     if "username" not in session:
@@ -688,6 +701,78 @@ def security_logs():
 
     return render_template("security_logs.html", logs=logs)
 
+@app.route("/analytics")
+def analytics():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    if session.get("role") != "Admin":
+        flash("Access denied. Admin only.", "danger")
+        return redirect(url_for("dashboard"))
+    
+    allowed, message = zero_trust_check(
+        "Dashboard",
+        "View",
+        session,
+        request.remote_addr,
+        session.get("device_id")
+    )
+
+    if not allowed:
+        flash(f"Access denied: {message}", "danger")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db_connection()
+
+    total_logs = conn.execute("SELECT COUNT(*) FROM security_logs").fetchone()[0]
+    allow_logs = conn.execute("SELECT COUNT(*) FROM security_logs WHERE decision='ALLOW'").fetchone()[0]
+    deny_logs = conn.execute("SELECT COUNT(*) FROM security_logs WHERE decision='DENY'").fetchone()[0]
+
+    total_readings = conn.execute("SELECT COUNT(*) FROM device_readings").fetchone()[0]
+    normal_readings = conn.execute("SELECT COUNT(*) FROM device_readings WHERE reading_status='normal'").fetchone()[0]
+    suspicious_readings = conn.execute("SELECT COUNT(*) FROM device_readings WHERE reading_status='suspicious'").fetchone()[0]
+
+    attack_rows = conn.execute("""
+        SELECT attack_type, COUNT(*) as total
+        FROM security_logs
+        WHERE attack_type IS NOT NULL
+          AND attack_type != 'None'
+        GROUP BY attack_type
+        ORDER BY total DESC
+    """).fetchall()
+
+    reading_rows = conn.execute("""
+        SELECT device_id, COUNT(*) as total
+        FROM device_readings
+        GROUP BY device_id
+        ORDER BY total DESC
+    """).fetchall()
+
+    conn.close()
+
+    attack_labels = [row["attack_type"] for row in attack_rows]
+    attack_counts = [row["total"] for row in attack_rows]
+
+    device_labels = [row["device_id"] for row in reading_rows]
+    device_counts = [row["total"] for row in reading_rows]
+
+    stats = {
+        "total_logs": total_logs,
+        "allow_logs": allow_logs,
+        "deny_logs": deny_logs,
+        "total_readings": total_readings,
+        "normal_readings": normal_readings,
+        "suspicious_readings": suspicious_readings,
+    }
+
+    return render_template(
+        "analytics.html",
+        stats=stats,
+        attack_labels=attack_labels,
+        attack_counts=attack_counts,
+        device_labels=device_labels,
+        device_counts=device_counts,
+    )
 
 @app.route("/logout")
 def logout():

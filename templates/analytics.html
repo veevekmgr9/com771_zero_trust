@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1150px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #eff6ff;
+            padding: 18px;
+            border-radius: 10px;
+            border-left: 5px solid #2563eb;
+        }
+
+        .card h3 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .chart-box {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .chart-box h3 {
+            margin-top: 0;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 24px;
+            text-decoration: none;
+            color: #1d4ed8;
+        }
+
+        canvas {
+            max-height: 360px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Security Analytics Dashboard</h2>
+        <p>This page summarizes Zero Trust decisions, attack detections, and IoT reading activity.</p>
+
+        <div class="stats">
+            <div class="card">
+                <h3>Total Logs</h3>
+                <p>{{ stats.total_logs }}</p>
+            </div>
+            <div class="card">
+                <h3>Allowed Requests</h3>
+                <p>{{ stats.allow_logs }}</p>
+            </div>
+            <div class="card">
+                <h3>Denied Requests</h3>
+                <p>{{ stats.deny_logs }}</p>
+            </div>
+            <div class="card">
+                <h3>Total Readings</h3>
+                <p>{{ stats.total_readings }}</p>
+            </div>
+            <div class="card">
+                <h3>Normal Readings</h3>
+                <p>{{ stats.normal_readings }}</p>
+            </div>
+            <div class="card">
+                <h3>Suspicious Readings</h3>
+                <p>{{ stats.suspicious_readings }}</p>
+            </div>
+        </div>
+
+        <div class="chart-box">
+            <h3>Allow vs Deny Requests</h3>
+            <canvas id="decisionChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <h3>Detected Attack Types</h3>
+            <canvas id="attackChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <h3>IoT Readings by Device</h3>
+            <canvas id="deviceChart"></canvas>
+        </div>
+
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+    </div>
+
+    <script>
+        const decisionChart = new Chart(document.getElementById('decisionChart'), {
+            type: 'bar',
+            data: {
+                labels: ['ALLOW', 'DENY'],
+                datasets: [{
+                    label: 'Requests',
+                    data: [{{ stats.allow_logs }}, {{ stats.deny_logs }}]
+        }]
+            }
+        });
+
+        const attackChart = new Chart(document.getElementById('attackChart'), {
+            type: 'pie',
+            data: {
+                labels: {{ attack_labels | tojson }},
+        datasets: [{
+            label: 'Attack Types',
+            data: {{ attack_counts | tojson }}
+                }]
+            }
+        });
+
+        const deviceChart = new Chart(document.getElementById('deviceChart'), {
+            type: 'bar',
+            data: {
+                labels: {{ device_labels | tojson }},
+        datasets: [{
+            label: 'Readings Submitted',
+            data: {{ device_counts | tojson }}
+                }]
+            }
+        });
+    </script>
+</body>
+
+</html>
