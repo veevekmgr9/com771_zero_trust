@@ -1,6 +1,5 @@
 from utils.db import get_db_connection
 
-# Utility functions for check trusted ips
 def is_trusted_ip(ip_address):
     if not ip_address:
         return False
@@ -14,7 +13,7 @@ def is_trusted_ip(ip_address):
 
     return ip is not None
 
-# Utility functions for get device by id
+
 def get_device_by_id(device_id):
     if not device_id:
         return None
@@ -28,12 +27,12 @@ def get_device_by_id(device_id):
 
     return device
 
-# Utility functions for check trusted devices
+
 def is_trusted_device(device_id):
     device = get_device_by_id(device_id)
     return device is not None and device["device_status"] == "active"
 
-# Utility function to update last seen timestamp for a device
+
 def update_device_last_seen(device_id):
     conn = get_db_connection()
     conn.execute("""
@@ -44,7 +43,7 @@ def update_device_last_seen(device_id):
     conn.commit()
     conn.close()
 
-# Utility function to get access policy for a role, module, and action
+
 def get_access_policy(role, module_name, action):
     conn = get_db_connection()
     policy = conn.execute("""
@@ -55,7 +54,7 @@ def get_access_policy(role, module_name, action):
 
     return policy
 
-# Main function to perform Zero Trust checks
+
 def zero_trust_check(module_name, action, session_data, ip_address, device_id):
     username = session_data.get("username")
     role = session_data.get("role")
@@ -82,7 +81,7 @@ def zero_trust_check(module_name, action, session_data, ip_address, device_id):
 
     return True, "Access granted"
 
-# Additional utility function to check if a device has an active assignment for a patient and action
+
 def has_active_device_assignment(device_id, patient_id, access_type="read"):
     conn = get_db_connection()
     assignment = conn.execute("""
@@ -96,7 +95,7 @@ def has_active_device_assignment(device_id, patient_id, access_type="read"):
 
     return assignment is not None
 
-# Main function to verify IoT device access based on device status, trusted IP, and active assignments
+
 def verify_iot_device_access(device_id, patient_id, ip_address, requested_action="read"):
     device = get_device_by_id(device_id)
 
@@ -117,3 +116,21 @@ def verify_iot_device_access(device_id, patient_id, ip_address, requested_action
 
     update_device_last_seen(device_id)
     return True, "IoT device access granted"
+
+
+def detect_abnormal_readings(heart_rate, temperature, oxygen_level):
+    issues = []
+
+    if heart_rate is not None and (heart_rate < 30 or heart_rate > 220):
+        issues.append("Abnormal heart rate")
+
+    if temperature is not None and (temperature < 30 or temperature > 45):
+        issues.append("Abnormal temperature")
+
+    if oxygen_level is not None and (oxygen_level < 50 or oxygen_level > 100):
+        issues.append("Abnormal oxygen level")
+
+    if issues:
+        return "suspicious", ", ".join(issues)
+
+    return "normal", "Readings are within expected range"
