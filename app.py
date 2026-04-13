@@ -1,5 +1,4 @@
 #app.secret_key = "QLAKSIBjksandjkabhOIWHOI1289192837@@#(@(*#(@Q!!@_+_+)))"
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash
 
@@ -10,9 +9,10 @@ from utils.zero_trust import (
     detect_abnormal_readings
 )
 from utils.logger import log_security_event
+from utils.input_detection import inspect_input
 
 app = Flask(__name__)
-app.secret_key = "QLAKSIBjksandjkabhOIWHOI1289192837@@#(@(*#(@Q!!@_+_+)))"
+app.secret_key = "change_this_to_a_long_random_secret_key"
 
 
 @app.route("/")
@@ -174,8 +174,160 @@ def dashboard():
     )
 
 
+@app.route("/patients")
+def patients():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    allowed, message = zero_trust_check(
+        "Dashboard",
+        "View",
+        session,
+        request.remote_addr,
+        session.get("device_id")
+    )
+
+    if not allowed:
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients",
+            session.get("device_id"),
+            request.remote_addr,
+            "View Patients",
+            1,
+            "",
+            "Access Control",
+            "DENY",
+            message
+        )
+        flash(f"Access denied: {message}", "danger")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db_connection()
+    all_patients = conn.execute("SELECT * FROM patients ORDER BY id ASC").fetchall()
+    conn.close()
+
+    log_security_event(
+        session.get("username"),
+        session.get("role"),
+        "Patients",
+        session.get("device_id"),
+        request.remote_addr,
+        "View Patients",
+        1,
+        "",
+        "None",
+        "ALLOW",
+        "Patient records viewed successfully"
+    )
+
+    return render_template(
+        "patients.html",
+        patients=all_patients,
+        search_results=None,
+        error=None
+    )
+
+
+@app.route("/search_patient", methods=["POST"])
+def search_patient():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    allowed, message = zero_trust_check(
+        "Dashboard",
+        "View",
+        session,
+        request.remote_addr,
+        session.get("device_id")
+    )
+
+    if not allowed:
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients",
+            session.get("device_id"),
+            request.remote_addr,
+            "Search Patient",
+            1,
+            "",
+            "Access Control",
+            "DENY",
+            message
+        )
+        flash(f"Access denied: {message}", "danger")
+        return redirect(url_for("dashboard"))
+
+    search_query = request.form.get("search_query", "").strip()
+
+    input_ok, attack_type = inspect_input(search_query)
+
+    conn = get_db_connection()
+    all_patients = conn.execute("SELECT * FROM patients ORDER BY id ASC").fetchall()
+
+    if not input_ok:
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients",
+            session.get("device_id"),
+            request.remote_addr,
+            "Search Patient",
+            1,
+            search_query,
+            attack_type,
+            "DENY",
+            f"{attack_type} detected in search input"
+        )
+        conn.close()
+
+        return render_template(
+            "patients.html",
+            patients=all_patients,
+            search_results=None,
+            error=f"{attack_type} detected. Request blocked."
+        )
+
+    search_results = conn.execute("""
+        SELECT * FROM patients
+        WHERE patient_name LIKE ? OR id LIKE ? OR disease LIKE ?
+        ORDER BY id ASC
+    """, (
+        f"%{search_query}%",
+        f"%{search_query}%",
+        f"%{search_query}%"
+    )).fetchall()
+    conn.close()
+
+    log_security_event(
+        session.get("username"),
+        session.get("role"),
+        "Patients",
+        session.get("device_id"),
+        request.remote_addr,
+        "Search Patient",
+        1,
+        search_query,
+        "None",
+        "ALLOW",
+        "Patient search completed successfully"
+    )
+
+    return render_template(
+        "patients.html",
+        patients=all_patients,
+        search_results=search_results,
+        error=None
+    )
+
+
 @app.route("/iot_access", methods=["GET", "POST"])
 def iot_access():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
     result = None
 
     if request.method == "POST":
@@ -250,6 +402,9 @@ def iot_access():
 
 @app.route("/submit_reading", methods=["GET", "POST"])
 def submit_reading():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
     result = None
 
     if request.method == "POST":
@@ -321,9 +476,6 @@ def submit_reading():
         conn.commit()
         conn.close()
 
-        decision = "ALLOW" if reading_status == "normal" else "ALLOW"
-        attack_type = "None" if reading_status == "normal" else "Suspicious IoT Reading"
-
         log_security_event(
             "DEVICE",
             "IoT",
@@ -333,8 +485,8 @@ def submit_reading():
             "WRITE Reading",
             1,
             f"patient_id={patient_id}",
-            attack_type,
-            decision,
+            "None" if reading_status == "normal" else "Suspicious IoT Reading",
+            "ALLOW",
             notes
         )
 
@@ -375,6 +527,33 @@ def device_readings():
     conn.close()
 
     return render_template("device_readings.html", readings=readings)
+
+
+@app.route("/security_logs")
+def security_logs():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    allowed, message = zero_trust_check(
+        "Dashboard",
+        "View",
+        session,
+        request.remote_addr,
+        session.get("device_id")
+    )
+
+    if not allowed:
+        flash(f"Access denied: {message}", "danger")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    logs = conn.execute("""
+        SELECT * FROM security_logs
+        ORDER BY timestamp DESC, id DESC
+    """).fetchall()
+    conn.close()
+
+    return render_template("security_logs.html", logs=logs)
 
 
 @app.route("/logout")
