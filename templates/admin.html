@@ -108,6 +108,26 @@
             {% endfor %}
         </ul>
 
+        <h3>Device Assignments</h3>
+        <table>
+            <tr>
+                <th>Device ID</th>
+                <th>Patient</th>
+                <th>Assigned By</th>
+                <th>Access Type</th>
+                <th>Status</th>
+            </tr>
+            {% for a in assignments %}
+            <tr>
+                <td>{{ a.device_id }}</td>
+                <td>{{ a.patient_name }}</td>
+                <td>{{ a.assigned_by }}</td>
+                <td>{{ a.access_type }}</td>
+                <td>{{ a.assignment_status }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
         <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
     </div>
 </body>
