@@ -79,6 +79,7 @@
             text-decoration: none;
             border-radius: 6px;
             margin-right: 10px;
+            margin-bottom: 10px;
         }
 
         .note {
@@ -131,11 +132,13 @@
 
         <div class="actions">
             <a href="{{ url_for('iot_access') }}" class="btn">Test IoT Device Access</a>
+            <a href="{{ url_for('submit_reading') }}" class="btn">Submit IoT Reading</a>
+            <a href="{{ url_for('device_readings') }}" class="btn">View Device Readings</a>
         </div>
 
         <div class="note">
-            This system now uses a separate device-patient assignment model, which is more realistic for hospital IoT
-            security.
+            Phase 4 now supports actual IoT reading submission, abnormal value detection, secure storage, and viewing of
+            collected readings.
         </div>
     </div>
 </body>

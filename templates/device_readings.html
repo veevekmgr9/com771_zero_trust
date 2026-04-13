@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Readings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #eff6ff;
+        }
+
+        .normal {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .suspicious {
+            color: #b45309;
+            font-weight: bold;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Stored IoT Device Readings</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Device ID</th>
+                    <th>Patient</th>
+                    <th>Heart Rate</th>
+                    <th>Temperature</th>
+                    <th>Oxygen Level</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reading in readings %}
+                <tr>
+                    <td>{{ reading.id }}</td>
+                    <td>{{ reading.device_id }}</td>
+                    <td>{{ reading.patient_name }}</td>
+                    <td>{{ reading.heart_rate }}</td>
+                    <td>{{ reading.temperature }}</td>
+                    <td>{{ reading.oxygen_level }}</td>
+                    <td>
+                        {% if reading.reading_status == 'normal' %}
+                        <span class="normal">{{ reading.reading_status }}</span>
+                        {% else %}
+                        <span class="suspicious">{{ reading.reading_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ reading.notes }}</td>
+                    <td>{{ reading.timestamp }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+    </div>
+</body>
+
+</html>

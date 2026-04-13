@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit IoT Reading</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .allow {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .deny {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .demo-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Submit IoT Reading</h2>
+        <p>This simulates an IoT medical device sending patient readings into the system.</p>
+
+        <form method="POST">
+            <label for="device_id">Device ID</label>
+            <input type="text" name="device_id" id="device_id" required>
+
+            <label for="patient_id">Patient ID</label>
+            <input type="number" name="patient_id" id="patient_id" required>
+
+            <label for="heart_rate">Heart Rate</label>
+            <input type="text" name="heart_rate" id="heart_rate">
+
+            <label for="temperature">Temperature</label>
+            <input type="text" name="temperature" id="temperature">
+
+            <label for="oxygen_level">Oxygen Level</label>
+            <input type="text" name="oxygen_level" id="oxygen_level">
+
+            <button type="submit">Submit Reading</button>
+        </form>
+
+        {% if result %}
+        <div class="result {% if result.status == 'ALLOW' %}allow{% else %}deny{% endif %}">
+            <strong>{{ result.status }}</strong><br>
+            {{ result.message }}
+
+            {% if result.reading_status %}
+            <hr>
+            <p><strong>Reading Status:</strong> {{ result.reading_status }}</p>
+            <p><strong>Notes:</strong> {{ result.notes }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="demo-box">
+            <strong>Try these examples:</strong>
+            <p>Normal: Device <code>IOT-HEART-001</code>, Patient <code>1</code>, Heart Rate <code>82</code>,
+                Temperature <code>37</code>, Oxygen <code>98</code></p>
+            <p>Suspicious but stored: Device <code>IOT-HEART-001</code>, Patient <code>1</code>, Heart Rate
+                <code>300</code>, Temperature <code>50</code>, Oxygen <code>110</code>
+            </p>
+            <p>Deny: Device <code>IOT-OXY-001</code>, Patient <code>1</code>, any values, because this device only has
+                read permission</p>
+            <p>Deny: Device <code>IOT-TEMP-001</code>, Patient <code>2</code>, any values, because device is blocked</p>
+        </div>
+
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+    </div>
+</body>
+
+</html>
