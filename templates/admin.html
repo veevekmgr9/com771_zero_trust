@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f7fb;
+        }
+
+        .container {
+            width: 1100px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .card {
+            display: inline-block;
+            padding: 15px;
+            margin: 10px;
+            background: #e0f2fe;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        button {
+            padding: 8px 12px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h2>Admin Dashboard</h2>
+
+        <!-- Stats -->
+        <div>
+            <div class="card">Users: {{ stats.users }}</div>
+            <div class="card">Devices: {{ stats.devices }}</div>
+            <div class="card">Active: {{ stats.active_devices }}</div>
+            <div class="card">Blocked: {{ stats.blocked_devices }}</div>
+            <div class="card">Readings: {{ stats.readings }}</div>
+        </div>
+
+        <hr>
+
+        <h3>Add Device</h3>
+        <form method="POST" action="/add_device">
+            <input name="device_name" placeholder="Device Name" required>
+            <input name="device_id" placeholder="Device ID" required>
+            <input name="device_type" placeholder="Type">
+            <button>Add</button>
+        </form>
+
+        <h3>Devices</h3>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>ID</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            {% for d in devices %}
+            <tr>
+                <td>{{ d.device_name }}</td>
+                <td>{{ d.device_id }}</td>
+                <td>{{ d.device_status }}</td>
+                <td>
+                    <a href="/toggle_device/{{ d.device_id }}">
+                        <button>Toggle</button>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <hr>
+
+        <h3>Add Trusted IP</h3>
+        <form method="POST" action="/add_ip">
+            <input name="ip" placeholder="IP Address" required>
+            <button>Add</button>
+        </form>
+
+        <h3>Trusted IPs</h3>
+        <ul>
+            {% for ip in ips %}
+            <li>{{ ip.ip_address }}</li>
+            {% endfor %}
+        </ul>
+
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
+    </div>
+</body>
+
+</html>

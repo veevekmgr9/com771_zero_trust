@@ -173,7 +173,56 @@ def dashboard():
         ip_address=request.remote_addr
     )
 
+@app.route("/admin")
+def admin_panel():
+    if "username" not in session:
+        return redirect(url_for("login"))
 
+    if session.get("role") != "Admin":
+        flash("Access denied. Admin only.", "danger")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db_connection()
+
+    stats = {
+        "users": conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
+        "devices": conn.execute("SELECT COUNT(*) FROM trusted_devices").fetchone()[0],
+        "active_devices": conn.execute("SELECT COUNT(*) FROM trusted_devices WHERE device_status='active'").fetchone()[0],
+        "blocked_devices": conn.execute("SELECT COUNT(*) FROM trusted_devices WHERE device_status='blocked'").fetchone()[0],
+        "readings": conn.execute("SELECT COUNT(*) FROM device_readings").fetchone()[0],
+    }
+
+    devices = conn.execute("SELECT * FROM trusted_devices").fetchall()
+    patients = conn.execute("SELECT * FROM patients").fetchall()
+    ips = conn.execute("SELECT * FROM trusted_ips").fetchall()
+
+    conn.close()
+
+    return render_template("admin.html", stats=stats, devices=devices, patients=patients, ips=ips)
+
+@app.route("/assignments")
+def assignments():
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    if session.get("role") not in ["Admin", "Doctor"]:
+        flash("Access denied. Admin or Doctor only.", "danger")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db_connection()
+    assignments = conn.execute("""
+        SELECT dpa.*, td.device_name, p.patient_name
+        FROM device_patient_assignments dpa
+        JOIN trusted_devices td ON dpa.device_id = td.device_id
+        JOIN patients p ON dpa.patient_id = p.id
+        ORDER BY dpa.start_time DESC
+    """).fetchall()
+    
+    devices = conn.execute("SELECT * FROM trusted_devices").fetchall()
+    patients = conn.execute("SELECT * FROM patients").fetchall()
+    conn.close()
+
+    return render_template("assign_patients.html", assignments=assignments, devices=devices, patients=patients)
 @app.route("/patients")
 def patients():
     if "username" not in session:
@@ -399,6 +448,90 @@ def iot_access():
 
     return render_template("iot_access.html", result=result)
 
+@app.route("/add_device", methods=["POST"])
+def add_device():
+    if session.get("role") != "Admin":
+        return redirect(url_for("dashboard"))
+
+    name = request.form["device_name"]
+    device_id = request.form["device_id"]
+    device_type = request.form["device_type"]
+
+    conn = get_db_connection()
+    conn.execute("""
+        INSERT INTO trusted_devices
+        (device_name, device_id, device_status, owner_role, device_type, can_access_data)
+        VALUES (?, ?, 'active', 'IoT', ?, 1)
+    """, (name, device_id, device_type))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_panel"))
+
+@app.route("/toggle_device/<device_id>")
+def toggle_device(device_id):
+    if session.get("role") != "Admin":
+        return redirect(url_for("dashboard"))
+
+    conn = get_db_connection()
+
+    device = conn.execute("""
+        SELECT device_status FROM trusted_devices WHERE device_id=?
+    """, (device_id,)).fetchone()
+
+    new_status = "blocked" if device["device_status"] == "active" else "active"
+
+    conn.execute("""
+        UPDATE trusted_devices SET device_status=? WHERE device_id=?
+    """, (new_status, device_id))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_panel"))
+
+@app.route("/assign_device", methods=["POST"])
+def assign_device():
+    if session.get("role") not in ["Admin", "Doctor"]:
+        return redirect(url_for("dashboard"))
+
+    device_id = request.form["device_id"]
+    patient_id = request.form["patient_id"]
+    access_type = request.form["access_type"]
+
+    conn = get_db_connection()
+
+    conn.execute("""
+        INSERT INTO device_patient_assignments
+        (device_id, patient_id, assigned_by, access_type, assignment_status)
+        VALUES (?, ?, ?, ?, 'active')
+    """, (device_id, patient_id, session["username"], access_type))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("assignments"))
+
+@app.route("/add_ip", methods=["POST"])
+def add_ip():
+    if session.get("role") != "Admin":
+        return redirect(url_for("dashboard"))
+
+    ip = request.form["ip"]
+
+    conn = get_db_connection()
+    try:
+        conn.execute("""
+            INSERT INTO trusted_ips (ip_address)
+            VALUES (?)
+        """, (ip,))
+        conn.commit()
+    except:
+        pass
+
+    conn.close()
+
+    return redirect(url_for("admin_panel"))
 
 @app.route("/submit_reading", methods=["GET", "POST"])
 def submit_reading():
