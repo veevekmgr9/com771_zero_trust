@@ -83,6 +83,9 @@
                 </tr>
             </thead>
             <tbody>
+                {% if logs|length == 0 %}
+                <p>No security logs available yet.</p>
+                {% else %}
                 {% for log in logs %}
                 <tr>
                     <td>{{ loop.index }}</td>
@@ -105,6 +108,7 @@
                     <td>{{ log.timestamp }}</td>
                 </tr>
                 {% endfor %}
+                {% endif %}
             </tbody>
         </table>
 

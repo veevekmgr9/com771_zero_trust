@@ -89,6 +89,23 @@
             border-radius: 8px;
             color: #155e75;
         }
+
+        .flash {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .flash.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .flash.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
     </style>
 </head>
 
@@ -97,7 +114,13 @@
         <div><strong>Zero Trust Healthcare System</strong></div>
         <div><a href="{{ url_for('logout') }}">Logout</a></div>
     </div>
-
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
     <div class="container">
         <h2>Welcome, {{ username }}</h2>
         <p>Your dashboard access has passed the Zero Trust checks.</p>
@@ -133,17 +156,17 @@
         <div class="actions">
             {% if role == 'Admin' %}
             <a href="{{ url_for('admin_panel') }}" class="btn">Admin Panel</a>
+            <a href="{{ url_for('analytics') }}" class="btn">View Analytics</a>
+            <a href="{{ url_for('security_logs') }}" class="btn">View Security Logs</a>
             {% endif %}
             {% if role in ['Admin', 'Doctor'] %}
             <a href="{{ url_for('assignments') }}" class="btn">Assign Patients</a>
             {% endif %}
+            {% if role in ['Admin', 'Doctor', 'Nurse'] %}
             <a href="{{ url_for('patients') }}" class="btn">View Patients</a>
             <a href="{{ url_for('iot_access') }}" class="btn">Test IoT Device Access</a>
             <a href="{{ url_for('submit_reading') }}" class="btn">Submit IoT Reading</a>
             <a href="{{ url_for('device_readings') }}" class="btn">View Device Readings</a>
-            <a href="{{ url_for('security_logs') }}" class="btn">View Security Logs</a>
-            {% if role == 'Admin' %}
-            <a href="{{ url_for('analytics') }}" class="btn">View Analytics</a>
             {% endif %}
         </div>
 

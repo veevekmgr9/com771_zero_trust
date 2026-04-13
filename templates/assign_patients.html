@@ -88,6 +88,9 @@
             </thead>
 
             <tbody>
+                {% if assignments|length == 0 %}
+                <p>No assignments available yet.</p>
+                {% else %}
                 {% for a in assignments %}
                 <tr>
                     <td>{{ loop.index }}</td>
@@ -98,6 +101,7 @@
                     <td>{{ a.assigned_by }}</td>
                 </tr>
                 {% endfor %}
+                {% endif %}
             </tbody>
         </table>
     </div>

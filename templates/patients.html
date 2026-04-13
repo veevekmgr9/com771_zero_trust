@@ -91,11 +91,35 @@
             padding: 2px 6px;
             border-radius: 4px;
         }
+
+        .flash {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .flash.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .flash.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
         <h2>Patient Records</h2>
         <p>Search patient records securely. Suspicious inputs will be blocked and logged.</p>
 
