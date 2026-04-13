@@ -29,11 +29,27 @@ CREATE TABLE IF NOT EXISTS patients (
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS trusted_devices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    device_name TEXT,
-    device_id TEXT UNIQUE,
+    device_name TEXT NOT NULL,
+    device_id TEXT UNIQUE NOT NULL,
     device_serial_number TEXT,
-    device_status TEXT,
-    owner_role TEXT
+    device_status TEXT NOT NULL,
+    owner_role TEXT,
+    device_type TEXT,
+    can_access_data INTEGER DEFAULT 0,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS device_patient_assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL,
+    patient_id INTEGER NOT NULL,
+    assigned_by TEXT,
+    access_type TEXT NOT NULL,
+    assignment_status TEXT NOT NULL,
+    start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    end_time DATETIME
 )
 """)
 
@@ -60,6 +76,18 @@ CREATE TABLE IF NOT EXISTS security_logs (
     decision TEXT,
     reason TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS access_policies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role TEXT,
+    module_name TEXT,
+    action TEXT,
+    requires_mfa INTEGER DEFAULT 1,
+    requires_trusted_device INTEGER DEFAULT 1,
+    requires_trusted_ip INTEGER DEFAULT 1
 )
 """)
 
