@@ -15,6 +15,12 @@ app = Flask(__name__)
 app.secret_key = "change_this_to_a_long_random_secret_key"
 
 
+def require_login():
+    return "username" in session
+
+def require_role(*allowed_roles):
+    return session.get("role") in allowed_roles
+
 @app.route("/")
 def home():
     return redirect(url_for("login"))
@@ -76,7 +82,7 @@ def login():
 
 @app.route("/verify_otp", methods=["GET", "POST"])
 def verify_otp():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
 
     if request.method == "POST":
@@ -122,7 +128,7 @@ def verify_otp():
 
 @app.route("/dashboard")
 def dashboard():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
 
     allowed, message = zero_trust_check(
@@ -175,11 +181,11 @@ def dashboard():
 
 @app.route("/admin")
 def admin_panel():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
 
-    if session.get("role") != "Admin":
-        flash("Access denied. Admin only.", "danger")
+    if not require_role("Admin"):
+        flash("Access denied. Only administrators can access the admin panel.", "danger")
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
@@ -215,11 +221,11 @@ def admin_panel():
     )
 @app.route("/assignments")
 def assignments():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
 
-    if session.get("role") not in ["Admin", "Doctor"]:
-        flash("Access denied. Admin or Doctor only.", "danger")
+    if not require_role("Admin", "Doctor"):
+        flash("Access denied. Only administrators and doctors can assign devices.", "danger")
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
@@ -236,10 +242,15 @@ def assignments():
     conn.close()
 
     return render_template("assign_patients.html", assignments=assignments, devices=devices, patients=patients)
+
 @app.route("/patients")
 def patients():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
+
+    if not require_role("Admin", "Doctor", "Nurse"):
+        flash("Access denied. Only administrators, doctors, and nurses can view patient records.", "danger")
+        return redirect(url_for("dashboard"))
 
     allowed, message = zero_trust_check(
         "Dashboard",
@@ -294,8 +305,12 @@ def patients():
 
 @app.route("/search_patient", methods=["POST"])
 def search_patient():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
+    
+    if not require_role("Admin", "Doctor", "Nurse"):
+        flash("Access denied. Only authorized users can search for patients.", "danger")
+        return redirect(url_for("dashboard"))
 
     allowed, message = zero_trust_check(
         "Dashboard",
@@ -389,6 +404,10 @@ def search_patient():
 def iot_access():
     if "username" not in session:
         return redirect(url_for("login"))
+    
+    if not require_role("Admin", "Doctor", "Nurse"):
+        flash("Access denied. Only authorized users can access IoT devices.", "danger")
+        return redirect(url_for("dashboard"))
 
     result = None
 
@@ -463,14 +482,24 @@ def iot_access():
 
 @app.route("/add_device", methods=["POST"])
 def add_device():
-    if session.get("role") != "Admin":
+    if not require_login() or not require_role("Admin"):
         return redirect(url_for("dashboard"))
 
-    name = request.form["device_name"]
-    device_id = request.form["device_id"]
-    device_type = request.form["device_type"]
+    name = request.form["device_name"].strip()
+    device_id = request.form["device_id"].strip()
+    device_type = request.form["device_type"].strip()
 
     conn = get_db_connection()
+    existing = conn.execute(
+        "SELECT id FROM trusted_devices WHERE device_id = ?",
+        (device_id,)
+    ).fetchone()
+
+    if existing:
+        conn.close()
+        flash("Device ID already exists.", "danger")
+        return redirect(url_for("admin_panel"))
+
     conn.execute("""
         INSERT INTO trusted_devices
         (device_name, device_id, device_status, owner_role, device_type, can_access_data)
@@ -479,11 +508,12 @@ def add_device():
     conn.commit()
     conn.close()
 
+    flash("Device added successfully.", "info")
     return redirect(url_for("admin_panel"))
 
 @app.route("/toggle_device/<device_id>")
 def toggle_device(device_id):
-    if session.get("role") != "Admin":
+    if not require_role("Admin"):
         return redirect(url_for("dashboard"))
 
     conn = get_db_connection()
@@ -505,14 +535,27 @@ def toggle_device(device_id):
 
 @app.route("/assign_device", methods=["POST"])
 def assign_device():
-    if session.get("role") not in ["Admin", "Doctor"]:
+    if not require_login() or not require_role("Admin"):
         return redirect(url_for("dashboard"))
 
-    device_id = request.form["device_id"]
-    patient_id = request.form["patient_id"]
-    access_type = request.form["access_type"]
+    device_id = request.form["device_id"].strip()
+    patient_id = request.form["patient_id"].strip()
+    access_type = request.form["access_type"].strip()
 
     conn = get_db_connection()
+
+    existing = conn.execute("""
+        SELECT id FROM device_patient_assignments
+        WHERE device_id = ?
+          AND patient_id = ?
+          AND access_type = ?
+          AND assignment_status = 'active'
+    """, (device_id, patient_id, access_type)).fetchone()
+
+    if existing:
+        conn.close()
+        flash("This active assignment already exists.", "danger")
+        return redirect(url_for("admin_panel"))
 
     conn.execute("""
         INSERT INTO device_patient_assignments
@@ -523,33 +566,42 @@ def assign_device():
     conn.commit()
     conn.close()
 
+    flash("Device assigned successfully.", "info")
     return redirect(url_for("assignments"))
 
 @app.route("/add_ip", methods=["POST"])
 def add_ip():
-    if session.get("role") != "Admin":
+    if not require_login() or not require_role("Admin"):
         return redirect(url_for("dashboard"))
 
-    ip = request.form["ip"]
+    ip = request.form["ip"].strip()
 
     conn = get_db_connection()
-    try:
-        conn.execute("""
-            INSERT INTO trusted_ips (ip_address)
-            VALUES (?)
-        """, (ip,))
-        conn.commit()
-    except:
-        pass
+    existing = conn.execute(
+        "SELECT id FROM trusted_ips WHERE ip_address = ?",
+        (ip,)
+    ).fetchone()
 
+    if existing:
+        conn.close()
+        flash("Trusted IP already exists.", "danger")
+        return redirect(url_for("admin_panel"))
+
+    conn.execute("INSERT INTO trusted_ips (ip_address) VALUES (?)", (ip,))
+    conn.commit()
     conn.close()
 
+    flash("Trusted IP added successfully.", "info")
     return redirect(url_for("admin_panel"))
 
 @app.route("/submit_reading", methods=["GET", "POST"])
 def submit_reading():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
+    
+    if not require_role("Admin", "Doctor", "Nurse"):
+        flash("Access denied. Only authorized users can submit readings.", "danger")
+        return redirect(url_for("dashboard"))
 
     result = None
 
@@ -648,8 +700,12 @@ def submit_reading():
 
 @app.route("/device_readings")
 def device_readings():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
+    
+    if not require_role("Admin", "Doctor", "Nurse"):
+        flash("Access denied. Only authorized users can view device readings.", "danger")
+        return redirect(url_for("dashboard"))
 
     allowed, message = zero_trust_check(
         "Dashboard",
@@ -677,8 +733,12 @@ def device_readings():
 
 @app.route("/security_logs")
 def security_logs():
-    if "username" not in session:
+    if not require_login():
         return redirect(url_for("login"))
+
+    if not require_role("Admin"):
+        flash("Access denied. Only administrators can view security logs.", "danger")
+        return redirect(url_for("dashboard"))
 
     allowed, message = zero_trust_check(
         "Dashboard",
