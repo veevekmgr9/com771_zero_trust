@@ -22,6 +22,56 @@
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
         }
 
+        .filter-box {
+            margin-top: 20px;
+            margin-bottom: 25px;
+            padding: 18px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .filter-actions {
+            margin-top: 15px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 14px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -57,6 +107,14 @@
             text-decoration: none;
             color: #1d4ed8;
         }
+
+        .empty {
+            margin-top: 20px;
+            padding: 14px;
+            background: #f8fafc;
+            border-radius: 8px;
+            color: #475569;
+        }
     </style>
 </head>
 
@@ -65,6 +123,72 @@
         <h2>Security Logs</h2>
         <p>This page shows authentication, access control, IoT events, blocked attacks, and reading submissions.</p>
 
+        <div class="filter-box">
+            <form method="GET" action="{{ url_for('security_logs') }}">
+                <div class="filter-grid">
+                    <div>
+                        <label for="username">Username</label>
+                        <input type="text" name="username" id="username" value="{{ filters.username }}">
+                    </div>
+
+                    <div>
+                        <label for="role">Role</label>
+                        <select name="role" id="role">
+                            <option value="">All</option>
+                            {% for item in roles %}
+                            <option value="{{ item.role }}" {% if filters.role==item.role %}selected{% endif %}>
+                                {{ item.role }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="module_name">Module</label>
+                        <select name="module_name" id="module_name">
+                            <option value="">All</option>
+                            {% for item in modules %}
+                            <option value="{{ item.module_name }}" {% if filters.module_name==item.module_name
+                                %}selected{% endif %}>
+                                {{ item.module_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="decision">Decision</label>
+                        <select name="decision" id="decision">
+                            <option value="">All</option>
+                            <option value="ALLOW" {% if filters.decision=="ALLOW" %}selected{% endif %}>ALLOW</option>
+                            <option value="DENY" {% if filters.decision=="DENY" %}selected{% endif %}>DENY</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="attack_type">Attack Type</label>
+                        <select name="attack_type" id="attack_type">
+                            <option value="">All</option>
+                            {% for item in attack_types %}
+                            <option value="{{ item.attack_type }}" {% if filters.attack_type==item.attack_type
+                                %}selected{% endif %}>
+                                {{ item.attack_type }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn">Apply Filters</button>
+                    <a href="{{ url_for('security_logs') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+
+        {% if logs|length == 0 %}
+        <div class="empty">No security logs found for the selected filters.</div>
+        {% else %}
         <table>
             <thead>
                 <tr>
@@ -83,9 +207,6 @@
                 </tr>
             </thead>
             <tbody>
-                {% if logs|length == 0 %}
-                <p>No security logs available yet.</p>
-                {% else %}
                 {% for log in logs %}
                 <tr>
                     <td>{{ loop.index }}</td>
@@ -108,9 +229,9 @@
                     <td>{{ log.timestamp }}</td>
                 </tr>
                 {% endfor %}
-                {% endif %}
             </tbody>
         </table>
+        {% endif %}
 
         <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
     </div>

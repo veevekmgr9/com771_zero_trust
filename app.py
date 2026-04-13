@@ -737,30 +737,79 @@ def security_logs():
         return redirect(url_for("login"))
 
     if not require_role("Admin"):
-        flash("Access denied. Only administrators can view security logs.", "danger")
+        flash("Access denied. Admin only.", "danger")
         return redirect(url_for("dashboard"))
 
-    allowed, message = zero_trust_check(
-        "Dashboard",
-        "View",
-        session,
-        request.remote_addr,
-        session.get("device_id")
-    )
+    username = request.args.get("username", "").strip()
+    role = request.args.get("role", "").strip()
+    module_name = request.args.get("module_name", "").strip()
+    decision = request.args.get("decision", "").strip()
+    attack_type = request.args.get("attack_type", "").strip()
 
-    if not allowed:
-        flash(f"Access denied: {message}", "danger")
-        return redirect(url_for("login"))
+    query = "SELECT * FROM security_logs WHERE 1=1"
+    params = []
+
+    if username:
+        query += " AND username LIKE ?"
+        params.append(f"%{username}%")
+
+    if role:
+        query += " AND role = ?"
+        params.append(role)
+
+    if module_name:
+        query += " AND module_name = ?"
+        params.append(module_name)
+
+    if decision:
+        query += " AND decision = ?"
+        params.append(decision)
+
+    if attack_type:
+        query += " AND attack_type = ?"
+        params.append(attack_type)
+
+    query += " ORDER BY timestamp DESC, id DESC"
 
     conn = get_db_connection()
-    logs = conn.execute("""
-        SELECT * FROM security_logs
-        ORDER BY timestamp DESC, id DESC
+    logs = conn.execute(query, params).fetchall()
+
+    roles = conn.execute("""
+        SELECT DISTINCT role FROM security_logs
+        WHERE role IS NOT NULL AND role != ''
+        ORDER BY role
     """).fetchall()
+
+    modules = conn.execute("""
+        SELECT DISTINCT module_name FROM security_logs
+        WHERE module_name IS NOT NULL AND module_name != ''
+        ORDER BY module_name
+    """).fetchall()
+
+    attack_types = conn.execute("""
+        SELECT DISTINCT attack_type FROM security_logs
+        WHERE attack_type IS NOT NULL
+          AND attack_type != ''
+          AND attack_type != 'None'
+        ORDER BY attack_type
+    """).fetchall()
+
     conn.close()
 
-    return render_template("security_logs.html", logs=logs)
-
+    return render_template(
+        "security_logs.html",
+        logs=logs,
+        roles=roles,
+        modules=modules,
+        attack_types=attack_types,
+        filters={
+            "username": username,
+            "role": role,
+            "module_name": module_name,
+            "decision": decision,
+            "attack_type": attack_type,
+        }
+    )
 @app.route("/analytics")
 def analytics():
     if "username" not in session:
