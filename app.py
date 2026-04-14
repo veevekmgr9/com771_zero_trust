@@ -21,6 +21,30 @@ app = Flask(__name__)
 app.secret_key = "change_this_to_a_long_random_secret_key"
 
 SESSION_TIMEOUT_MINUTES = 10
+LOCKOUT_THRESHOLD = 5
+LOCKOUT_WINDOW_MINUTES = 10
+
+def record_failed_login(username, ip_address):
+    conn = get_db_connection()
+    conn.execute("""
+        INSERT INTO login_attempts (username, ip_address)
+        VALUES (?, ?)
+    """, (username, ip_address))
+    conn.commit()
+    conn.close()
+
+
+def is_locked_out(username, ip_address):
+    conn = get_db_connection()
+    count = conn.execute("""
+        SELECT COUNT(*) FROM login_attempts
+        WHERE username = ?
+          AND ip_address = ?
+          AND attempt_time >= datetime('now', ?)
+    """, (username, ip_address, f"-{LOCKOUT_WINDOW_MINUTES} minutes")).fetchone()[0]
+    conn.close()
+
+    return count >= LOCKOUT_THRESHOLD
 
 def is_session_expired():
     last_activity = session.get("last_activity")
@@ -112,6 +136,23 @@ def login():
         ).fetchone()
         conn.close()
 
+        if is_locked_out(username, request.remote_addr):
+            log_security_event(
+                username if username else "Unknown",
+                "Unknown",
+                "Login",
+                "Unknown",
+                request.remote_addr,
+                "Login Attempt",
+                1,
+                username,
+                "Brute Force Protection",
+                "DENY",
+                "Too many failed login attempts"
+            )
+            flash("Too many failed login attempts. Please try again later.", "danger")
+            return render_template("login.html")
+        
         if user and check_password_hash(user["password"], password):
             session.clear()
             session["username"] = user["username"]
@@ -149,6 +190,7 @@ def login():
                 "DENY",
                 "Invalid username or password"
             )
+            record_failed_login(username, request.remote_addr)
             flash("Invalid username or password.", "danger")
 
     return render_template("login.html")
@@ -232,7 +274,7 @@ def enforce_session_timeout():
             return redirect(url_for("login"))
 
         update_session_activity()
-        
+
 @app.route("/dashboard")
 def dashboard():
     if not require_login():
@@ -531,6 +573,7 @@ def download_patient_pdf(patient_id):
         session.get("username"),
         patient_id
     )
+
     if not token_ok:
         log_security_event(
             session.get("username"),
@@ -543,7 +586,7 @@ def download_patient_pdf(patient_id):
             str(patient_id),
             "Invalid Download Token",
             "DENY",
-            token_message
+            f"{token_message} for patient {patient['patient_name']}"
         )
         flash(token_message, "danger")
         return redirect(url_for("patients"))
@@ -558,6 +601,7 @@ def download_patient_pdf(patient_id):
         )
         mark_token_used(token)
 
+        
         log_security_event(
             session.get("username"),
             session.get("role"),
@@ -569,7 +613,7 @@ def download_patient_pdf(patient_id):
             str(patient_id),
             "None",
             "ALLOW",
-            "Password protected patient PDF downloaded"
+            f"Password protected patient PDF downloaded for patient {patient['patient_name']}"
         )
 
         return send_file(
