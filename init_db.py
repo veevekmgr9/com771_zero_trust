@@ -105,6 +105,18 @@ CREATE TABLE IF NOT EXISTS access_policies (
 )
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS download_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    username TEXT NOT NULL,
+    patient_id INTEGER NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
 conn.commit()
 conn.close()
 
