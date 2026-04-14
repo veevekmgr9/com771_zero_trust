@@ -125,7 +125,7 @@
 
         <form method="POST" action="{{ url_for('search_patient') }}">
             <input type="text" name="search_query" placeholder="Search by patient name, ID, or disease" required>
-            <button type="submit">Search</button>
+            <button type="submit">Searches</button>
         </form>
 
         {% if error %}
@@ -152,6 +152,7 @@
                     <th>Age</th>
                     <th>Disease</th>
                     <th>Doctor Assigned</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -162,6 +163,11 @@
                     <td>{{ patient.age }}</td>
                     <td>{{ patient.disease }}</td>
                     <td>{{ patient.doctor_assigned }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('request_pdf_token', patient_id=patient.id) }}">
+                            <button type="submit">Generate Secure PDF</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -177,6 +183,7 @@
                     <th>Age</th>
                     <th>Disease</th>
                     <th>Doctor Assigned</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -189,6 +196,11 @@
                     <td>{{ patient.age }}</td>
                     <td>{{ patient.disease }}</td>
                     <td>{{ patient.doctor_assigned }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('request_pdf_token', patient_id=patient.id) }}">
+                            <button type="submit">Generate Secure PDF</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

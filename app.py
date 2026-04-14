@@ -1,4 +1,9 @@
 #app.secret_key = "QLAKSIBjksandjkabhOIWHOI1289192837@@#(@(*#(@Q!!@_+_+)))"
+import os
+import secrets
+from datetime import datetime, timedelta
+from flask import send_file
+from utils.pdf_utils import generate_encrypted_patient_pdf
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash
 
@@ -20,6 +25,60 @@ def require_login():
 
 def require_role(*allowed_roles):
     return session.get("role") in allowed_roles
+
+def can_access_patient_record(role, username, patient):
+    if role == "Admin":
+        return True
+    if role in ["Doctor", "Nurse"]:
+        return True
+    if role == "Patient":
+        # Simple demo rule: patient1 can only access patient id 1
+        return username == "patient1" and str(patient["id"]) == "1"
+    return False
+
+
+def create_download_token(username, patient_id):
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = get_db_connection()
+    conn.execute("""
+        INSERT INTO download_tokens (token, username, patient_id, expires_at, used)
+        VALUES (?, ?, ?, ?, 0)
+    """, (token, username, patient_id, expires_at))
+    conn.commit()
+    conn.close()
+
+    return token
+
+
+def validate_download_token(token, username, patient_id):
+    conn = get_db_connection()
+    row = conn.execute("""
+        SELECT * FROM download_tokens
+        WHERE token = ? AND username = ? AND patient_id = ? AND used = 0
+    """, (token, username, patient_id)).fetchone()
+
+    if not row:
+        conn.close()
+        return False, "Invalid or already used token"
+
+    expires_at = datetime.strptime(row["expires_at"], "%Y-%m-%d %H:%M:%S")
+    if datetime.utcnow() > expires_at:
+        conn.close()
+        return False, "Token expired"
+
+    conn.close()
+    return True, "Token valid"
+
+
+def mark_token_used(token):
+    conn = get_db_connection()
+    conn.execute("""
+        UPDATE download_tokens SET used = 1 WHERE token = ?
+    """, (token,))
+    conn.commit()
+    conn.close()
 
 @app.route("/")
 def home():
@@ -302,6 +361,191 @@ def patients():
         error=None
     )
 
+@app.route("/patients/<int:patient_id>/request_pdf_token", methods=["POST"])
+def request_pdf_token(patient_id):
+    if not require_login():
+        return redirect(url_for("login"))
+
+    allowed, message = zero_trust_check(
+        "Dashboard",
+        "View",
+        session,
+        request.remote_addr,
+        session.get("device_id")
+    )
+    if not allowed:
+        flash(f"Access denied: {message}", "danger")
+        return redirect(url_for("patients"))
+
+    conn = get_db_connection()
+    patient = conn.execute(
+        "SELECT * FROM patients WHERE id = ?",
+        (patient_id,)
+    ).fetchone()
+    conn.close()
+
+    if not patient:
+        flash("Patient not found.", "danger")
+        return redirect(url_for("patients"))
+
+    if not can_access_patient_record(session.get("role"), session.get("username"), patient):
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients PDF",
+            session.get("device_id"),
+            request.remote_addr,
+            "Request PDF Token",
+            1,
+            str(patient_id),
+            "Unauthorized Patient Access",
+            "DENY",
+            "User not allowed to export this patient record"
+        )
+        flash("You are not allowed to export this patient record.", "danger")
+        return redirect(url_for("patients"))
+
+    token = create_download_token(session.get("username"), patient_id)
+
+    log_security_event(
+        session.get("username"),
+        session.get("role"),
+        "Patients PDF",
+        session.get("device_id"),
+        request.remote_addr,
+        "Request PDF Token",
+        1,
+        str(patient_id),
+        "None",
+        "ALLOW",
+        "Secure PDF token issued"
+    )
+
+    return render_template(
+        "patient_pdf_download.html",
+        patient=patient,
+        token=token
+    )
+
+@app.route("/patients/<int:patient_id>/download_pdf", methods=["POST"])
+def download_patient_pdf(patient_id):
+    if not require_login():
+        return redirect(url_for("login"))
+
+    allowed, message = zero_trust_check(
+        "Dashboard",
+        "View",
+        session,
+        request.remote_addr,
+        session.get("device_id")
+    )
+    if not allowed:
+        flash(f"Access denied: {message}", "danger")
+        return redirect(url_for("patients"))
+
+    token = request.form.get("token", "").strip()
+    pdf_password = request.form.get("pdf_password", "").strip()
+
+    if not pdf_password:
+        flash("PDF password is required.", "danger")
+        return redirect(url_for("patients"))
+
+    conn = get_db_connection()
+    patient = conn.execute(
+        "SELECT * FROM patients WHERE id = ?",
+        (patient_id,)
+    ).fetchone()
+    conn.close()
+
+    if not patient:
+        flash("Patient not found.", "danger")
+        return redirect(url_for("patients"))
+
+    if not can_access_patient_record(session.get("role"), session.get("username"), patient):
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients PDF",
+            session.get("device_id"),
+            request.remote_addr,
+            "Download PDF",
+            1,
+            str(patient_id),
+            "Unauthorized Patient Access",
+            "DENY",
+            "User not allowed to download this patient record"
+        )
+        flash("You are not allowed to download this patient record.", "danger")
+        return redirect(url_for("patients"))
+
+    token_ok, token_message = validate_download_token(
+        token,
+        session.get("username"),
+        patient_id
+    )
+    if not token_ok:
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients PDF",
+            session.get("device_id"),
+            request.remote_addr,
+            "Download PDF",
+            1,
+            str(patient_id),
+            "Invalid Download Token",
+            "DENY",
+            token_message
+        )
+        flash(token_message, "danger")
+        return redirect(url_for("patients"))
+
+    try:
+        owner_password = secrets.token_urlsafe(24)
+        pdf_path = generate_encrypted_patient_pdf(
+            patient=patient,
+            generated_by=session.get("username"),
+            user_password=pdf_password,
+            owner_password=owner_password
+        )
+        mark_token_used(token)
+
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients PDF",
+            session.get("device_id"),
+            request.remote_addr,
+            "Download PDF",
+            1,
+            str(patient_id),
+            "None",
+            "ALLOW",
+            "Password protected patient PDF downloaded"
+        )
+
+        return send_file(
+            pdf_path,
+            as_attachment=True,
+            download_name=f"patient_{patient_id}_secure.pdf",
+            mimetype="application/pdf"
+        )
+    except Exception as e:
+        log_security_event(
+            session.get("username"),
+            session.get("role"),
+            "Patients PDF",
+            session.get("device_id"),
+            request.remote_addr,
+            "Download PDF",
+            1,
+            str(patient_id),
+            "PDF Generation Error",
+            "DENY",
+            str(e)
+        )
+        flash("Failed to generate secure PDF.", "danger")
+        return redirect(url_for("patients"))
 
 @app.route("/search_patient", methods=["POST"])
 def search_patient():

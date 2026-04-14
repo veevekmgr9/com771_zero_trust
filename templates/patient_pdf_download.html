@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Patient PDF Download</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .note {
+            margin-top: 18px;
+            padding: 14px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Secure Patient PDF Export</h2>
+        <p>You are exporting a password-protected PDF for <b>{{ patient.patient_name }}</b>.</p>
+
+        <form method="POST" action="{{ url_for('download_patient_pdf', patient_id=patient.id) }}">
+            <input type="hidden" name="token" value="{{ token }}">
+
+            <label for="pdf_password">Set PDF Password</label>
+            <input type="password" name="pdf_password" id="pdf_password" required
+                pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$"
+                title="Password must be at least 8 characters long and include uppercase, lowercase, number, and special character">
+            <small id="passwordHelp" style="color: red; display: none;">
+                Password must contain uppercase, lowercase, number, special character and be at least 8 characters long.
+            </small>
+            <button type="submit">Download Encrypted PDF</button>
+        </form>
+
+        <div class="note">
+            This token is single-use and expires in 5 minutes.
+        </div>
+
+        <a class="back-link" href="{{ url_for('patients') }}">← Back to patients</a>
+    </div>
+    <script>
+        const passwordInput = document.getElementById("pdf_password");
+        const helpText = document.getElementById("passwordHelp");
+
+        passwordInput.addEventListener("input", function () {
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+            if (!regex.test(passwordInput.value)) {
+                helpText.style.display = "block";
+            } else {
+                helpText.style.display = "none";
+            }
+        });
+    </script>
+</body>
+
+</html>
