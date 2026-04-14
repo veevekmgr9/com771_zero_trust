@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 
 cursor.execute("""
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT,
+    ip_address TEXT,
+    attempt_time DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+cursor.execute("""
 CREATE TABLE IF NOT EXISTS patients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     patient_name TEXT NOT NULL,

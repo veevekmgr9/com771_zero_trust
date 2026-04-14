@@ -6,6 +6,7 @@ from flask import send_file
 from utils.pdf_utils import generate_encrypted_patient_pdf
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash
+from datetime import datetime, timedelta
 
 from utils.db import get_db_connection
 from utils.zero_trust import (
@@ -19,6 +20,19 @@ from utils.input_detection import inspect_input
 app = Flask(__name__)
 app.secret_key = "change_this_to_a_long_random_secret_key"
 
+SESSION_TIMEOUT_MINUTES = 10
+
+def is_session_expired():
+    last_activity = session.get("last_activity")
+    if not last_activity:
+        return False
+
+    last_time = datetime.strptime(last_activity, "%Y-%m-%d %H:%M:%S")
+    return datetime.utcnow() > last_time + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+
+
+def update_session_activity():
+    session["last_activity"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
 def require_login():
     return "username" in session
@@ -118,6 +132,7 @@ def login():
                 "ALLOW",
                 "Username and password verified"
             )
+            update_session_activity()
 
             return redirect(url_for("verify_otp"))
         else:
@@ -165,6 +180,7 @@ def verify_otp():
             )
 
             flash("OTP verified successfully.", "info")
+            update_session_activity()
             return redirect(url_for("dashboard"))
         else:
             log_security_event(
@@ -184,7 +200,39 @@ def verify_otp():
 
     return render_template("verify_otp.html")
 
+@app.before_request
+def enforce_session_timeout():
+    public_routes = ["login", "verify_otp", "static"]
 
+    if request.endpoint in public_routes:
+        return
+
+    if "username" in session:
+        if is_session_expired():
+            username = session.get("username", "Unknown")
+            role = session.get("role", "Unknown")
+            device_id = session.get("device_id", "Unknown")
+
+            log_security_event(
+                username,
+                role,
+                "Session",
+                device_id,
+                request.remote_addr,
+                "Session Timeout",
+                1,
+                "",
+                "None",
+                "DENY",
+                "Session expired due to inactivity"
+            )
+
+            session.clear()
+            flash("Your session expired due to inactivity. Please log in again.", "danger")
+            return redirect(url_for("login"))
+
+        update_session_activity()
+        
 @app.route("/dashboard")
 def dashboard():
     if not require_login():
