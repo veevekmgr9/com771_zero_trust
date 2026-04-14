@@ -287,6 +287,13 @@ def dashboard():
         request.remote_addr,
         session.get("device_id")
     )
+    conn = get_db_connection()
+    summary = {
+        "trusted_devices": conn.execute("SELECT COUNT(*) FROM trusted_devices WHERE device_status='active'").fetchone()[0],
+        "denied_events": conn.execute("SELECT COUNT(*) FROM security_logs WHERE decision='DENY'").fetchone()[0],
+        "suspicious_readings": conn.execute("SELECT COUNT(*) FROM device_readings WHERE reading_status='suspicious'").fetchone()[0],
+    }
+    conn.close()
 
     if not allowed:
         log_security_event(
@@ -325,7 +332,8 @@ def dashboard():
         role=session.get("role"),
         device_id=session.get("device_id"),
         mfa_verified=session.get("mfa_verified"),
-        ip_address=request.remote_addr
+        ip_address=request.remote_addr,
+        summary=summary
     )
 
 @app.route("/admin")
