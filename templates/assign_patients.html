@@ -25,6 +25,14 @@
             border-radius: 8px;
         }
 
+        input,
+        select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
         table {
             width: 100%;
             margin-top: 20px;
@@ -43,6 +51,23 @@
             color: white;
             border: none;
             border-radius: 5px;
+        }
+
+        .active-button {
+            background: rgb(0, 105, 0);
+            cursor: pointer;
+        }
+
+        .blocked-button {
+            background: rgb(255, 10, 10);
+            cursor: pointer;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
         }
     </style>
 </head>
@@ -84,6 +109,7 @@
                     <th>Access Type</th>
                     <th>Status</th>
                     <th>Assigned By</th>
+                    <th>Action</th>
                 </tr>
             </thead>
 
@@ -97,12 +123,28 @@
                     <td>{{ a.device_id }}</td>
                     <td>{{ a.patient_name }}</td>
                     <td>{{ a.access_type }}</td>
-                    <td>{{ a.assignment_status }}</td>
+                    {% if a.assignment_status == 'active' %}
+                    <td><button class="active-button">{{ "Active" }}</button></td>
+                    {% elif a.assignment_status == 'ended' %}
+                    <td><button class="blocked-button">{{ "Ended" }}</button></td>
+                    {% else %}
+                    <td>{{ "Unknown" }}</td>
+                    {% endif %}
                     <td>{{ a.assigned_by }}</td>
+                    <td>
+                        {% if a.assignment_status == 'active' %}
+                        <a href="{{ url_for('end_assignment', assignment_id=a.id) }}">
+                            <button class="blocked-button">End</button>
+                        </a>
+                        {% else %}
+                        <button style="cursor: not-allowed;" disabled>Ended</button>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
                 {% endif %}
             </tbody>
         </table>
+        <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
     </div>
 </body>

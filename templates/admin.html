@@ -25,6 +25,14 @@
             border-radius: 8px;
         }
 
+        input,
+        select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
         table {
             width: 100%;
             margin-top: 20px;
@@ -33,6 +41,7 @@
 
         th,
         td {
+            text-align: justify;
             padding: 10px;
             border-bottom: 1px solid #ddd;
         }
@@ -43,6 +52,16 @@
             color: white;
             border: none;
             border-radius: 5px;
+        }
+
+        .active-button {
+            background: rgb(0, 105, 0);
+            cursor: pointer;
+        }
+
+        .blocked-button {
+            background: rgb(255, 10, 10);
+            cursor: pointer;
         }
 
         .flash {
@@ -60,6 +79,13 @@
         .flash.danger {
             background: #fee2e2;
             color: #991b1b;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #1d4ed8;
         }
     </style>
     </style>
@@ -83,6 +109,7 @@
             <div class="card">Active: {{ stats.active_devices }}</div>
             <div class="card">Blocked: {{ stats.blocked_devices }}</div>
             <div class="card">Readings: {{ stats.readings }}</div>
+            <div class="card">Ended: {{ stats.ended_assignments }}</div>
         </div>
 
         <hr>
@@ -107,10 +134,20 @@
             <tr>
                 <td>{{ d.device_name }}</td>
                 <td>{{ d.device_id }}</td>
-                <td>{{ d.device_status }}</td>
+                {% if d.device_status == 'active' %}
+                <td><button class="active-button">{{ "Active" }}</button></td>
+                {% elif d.device_status == 'blocked' %}
+                <td><button class="blocked-button">{{ "Blocked" }}</button></td>
+                {% else %}
+                <td>{{ "Unknown" }}</td>
+                {% endif %}
                 <td>
                     <a href="/toggle_device/{{ d.device_id }}">
-                        <button>Toggle</button>
+                        {% if d.device_status == 'active' %}
+                        <button class="blocked-button">Block</button>
+                        {% else %}
+                        <button class="active-button">Active</button>
+                        {% endif %}
                     </a>
                 </td>
             </tr>
@@ -140,6 +177,7 @@
                 <th>Assigned By</th>
                 <th>Access Type</th>
                 <th>Status</th>
+                <th>Action</th>
             </tr>
             {% for a in assignments %}
             <tr>
@@ -147,11 +185,25 @@
                 <td>{{ a.patient_name }}</td>
                 <td>{{ a.assigned_by }}</td>
                 <td>{{ a.access_type }}</td>
-                <td>{{ a.assignment_status }}</td>
+                {% if a.assignment_status == 'active' %}
+                <td><button class="active-button">{{ "Active" }}</button></td>
+                {% elif a.assignment_status == 'ended' %}
+                <td><button class="blocked-button">{{ "Ended" }}</button></td>
+                {% else %}
+                <td>{{ "Unknown" }}</td>
+                {% endif %}
+                <td>
+                    {% if a.assignment_status == 'active' %}
+                    <a href="{{ url_for('end_assignment', assignment_id=a.id) }}">
+                        <button class="blocked-button">End</button>
+                    </a>
+                    {% else %}
+                    <button style="cursor: not-allowed;" disabled>Ended</button>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </table>
-
         <a class="back-link" href="{{ url_for('dashboard') }}">← Back to dashboard</a>
     </div>
 </body>

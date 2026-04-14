@@ -353,6 +353,7 @@ def admin_panel():
         "active_devices": conn.execute("SELECT COUNT(*) FROM trusted_devices WHERE device_status='active'").fetchone()[0],
         "blocked_devices": conn.execute("SELECT COUNT(*) FROM trusted_devices WHERE device_status='blocked'").fetchone()[0],
         "readings": conn.execute("SELECT COUNT(*) FROM device_readings").fetchone()[0],
+        "ended_assignments": conn.execute("SELECT COUNT(*) FROM device_patient_assignments WHERE assignment_status='ended'").fetchone()[0],
     }
 
     devices = conn.execute("SELECT * FROM trusted_devices").fetchall()
@@ -399,6 +400,24 @@ def assignments():
     conn.close()
 
     return render_template("assign_patients.html", assignments=assignments, devices=devices, patients=patients)
+
+@app.route("/end_assignment/<int:assignment_id>")
+def end_assignment(assignment_id):
+    if not require_login() or not require_role("Admin"):
+        return redirect(url_for("dashboard"))
+
+    conn = get_db_connection()
+    conn.execute("""
+        UPDATE device_patient_assignments
+        SET assignment_status = 'ended',
+            end_time = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (assignment_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Assignment ended successfully.", "info")
+    return redirect(url_for("admin_panel"))
 
 @app.route("/patients")
 def patients():

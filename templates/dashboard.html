@@ -82,6 +82,17 @@
             margin-bottom: 10px;
         }
 
+        .logout-btn {
+            background: #dc2626;
+            display: inline-block;
+            padding: 10px 16px;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
         .note {
             margin-top: 30px;
             padding: 15px;
@@ -110,10 +121,10 @@
 </head>
 
 <body>
-    <div class="navbar">
+    <!-- <div class="navbar">
         <div><strong>Zero Trust Healthcare System</strong></div>
         <div><a href="{{ url_for('logout') }}">Logout</a></div>
-    </div>
+    </div> -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     {% for category, message in messages %}
@@ -181,6 +192,7 @@
             <a href="{{ url_for('iot_access') }}" class="btn">Test IoT Device Access</a>
             <a href="{{ url_for('submit_reading') }}" class="btn">Submit IoT Reading</a>
             <a href="{{ url_for('device_readings') }}" class="btn">View Device Readings</a>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
             {% endif %}
         </div>
     </div>
