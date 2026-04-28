@@ -9,9 +9,9 @@ users = [
 ]
 
 patients = [
-    ("John Doe", 45, "Hypertension", "Encrypted Diagnosis Placeholder", "doctor1"),
-    ("Alice Smith", 32, "Diabetes", "Encrypted Diagnosis Placeholder", "doctor1"),
-    ("Robert Brown", 60, "Asthma", "Encrypted Diagnosis Placeholder", "doctor1"),
+    ("John Cena", 45, "Hypertension", "Encrypted Diagnosis Placeholder", "doctor1"),
+    ("Lancelot", 32, "Diabetes", "Encrypted Diagnosis Placeholder", "doctor1"),
+    ("Tanjiro Kamado", 60, "Asthma", "Encrypted Diagnosis Placeholder", "doctor1"),
 ]
 
 trusted_devices = [

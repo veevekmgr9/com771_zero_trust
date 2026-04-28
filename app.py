@@ -1,4 +1,3 @@
-#app.secret_key = "QLAKSIBjksandjkabhOIWHOI1289192837@@#(@(*#(@Q!!@_+_+)))"
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -6,7 +5,7 @@ from flask import send_file
 from utils.pdf_utils import generate_encrypted_patient_pdf
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from utils.db import get_db_connection
 from utils.zero_trust import (
@@ -18,7 +17,7 @@ from utils.logger import log_security_event
 from utils.input_detection import inspect_input
 
 app = Flask(__name__)
-app.secret_key = "change_this_to_a_long_random_secret_key"
+app.secret_key = "QLAKSIBjksandjkabhOIWHOI1289192837@@#(@(*#(@Q!!@_+_+)))"
 
 SESSION_TIMEOUT_MINUTES = 10
 LOCKOUT_THRESHOLD = 5
@@ -52,11 +51,12 @@ def is_session_expired():
         return False
 
     last_time = datetime.strptime(last_activity, "%Y-%m-%d %H:%M:%S")
-    return datetime.utcnow() > last_time + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+    last_time = last_time.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) > last_time + timedelta(minutes=SESSION_TIMEOUT_MINUTES)
 
 
 def update_session_activity():
-    session["last_activity"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    session["last_activity"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 def require_login():
     return "username" in session
@@ -77,7 +77,7 @@ def can_access_patient_record(role, username, patient):
 
 def create_download_token(username, patient_id):
     token = secrets.token_urlsafe(32)
-    expires_at = (datetime.utcnow() + timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
 
     conn = get_db_connection()
     conn.execute("""
@@ -102,7 +102,8 @@ def validate_download_token(token, username, patient_id):
         return False, "Invalid or already used token"
 
     expires_at = datetime.strptime(row["expires_at"], "%Y-%m-%d %H:%M:%S")
-    if datetime.utcnow() > expires_at:
+    expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
         conn.close()
         return False, "Token expired"
 
@@ -562,7 +563,11 @@ def download_patient_pdf(patient_id):
 
     token = request.form.get("token", "").strip()
     pdf_password = request.form.get("pdf_password", "").strip()
-
+    print("TOKEN:", token)
+    print("PDF PASSWORD:", pdf_password)
+    print("ROLE:", session.get("role"))
+    print("USERNAME:", session.get("username"))
+    print("DEVICE:", session.get("device_id"))
     if not pdf_password:
         flash("PDF password is required.", "danger")
         return redirect(url_for("patients"))
